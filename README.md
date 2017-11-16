@@ -21,6 +21,11 @@ You have to add the servlet class `lc.kra.servlet.FileManagerServlet` you your d
   <display-name>File Manager Servlet</display-name>
   <servlet-name>FileManagerServlet</servlet-name>
   <servlet-class>lc.kra.servlet.FileManagerServlet</servlet-class>
+  <multipart-config>
+    <max-file-size>20848820</max-file-size>
+    <max-request-size>418018841</max-request-size>
+    <file-size-threshold>1048576</file-size-threshold>
+  </multipart-config>
 </servlet>
 <servlet-mapping>
   <servlet-name>FileManagerServlet</servlet-name>

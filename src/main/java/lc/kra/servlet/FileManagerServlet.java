@@ -39,6 +39,7 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -65,6 +66,7 @@ public class FileManagerServlet extends HttpServlet {
 
 	private static final int BUFFER_SIZE = 4096;
 	private static final String ENCODING = "UTF-8";
+	private DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.MEDIUM);
 
 	/**
 	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse response)
@@ -73,9 +75,13 @@ public class FileManagerServlet extends HttpServlet {
 		Files files = null; File file = null, parent;
 		String path = request.getParameter("path"), type = request.getContentType(), search = request.getParameter("search"), mode;
 		
-		if(path==null||!(file=new File(path)).exists())
-			files = new Roots();
-		else if(request.getParameter("zip")!=null) {
+		if(path==null||!(file=new File(path)).exists()) {
+			try {
+				files = new Roots();
+			} catch (NoClassDefFoundError e) {
+				e.printStackTrace();
+			}
+		} else if(request.getParameter("zip")!=null) {
 			File zipFile = File.createTempFile(file.getName()+"-",".zip");
 			if(file.isFile())
 				ZipUtil.addEntry(zipFile, file.getName(), file);
@@ -83,9 +89,10 @@ public class FileManagerServlet extends HttpServlet {
 				ZipUtil.pack(file, zipFile);
 			downloadFile(response, zipFile, permamentName(zipFile.getName()), "application/zip");
 		} else if(request.getParameter("delete")!=null) {
-			if(file.isFile())
+			if(file.isFile()) {
 				file.delete();
-			else if(file.isDirectory()) {
+				files = new Directory(file.getParentFile());
+			} else if(file.isDirectory()) {
 				java.nio.file.Files.walkFileTree(file.toPath(),new SimpleFileVisitor<Path>() {
 				   @Override public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 				   	java.nio.file.Files.delete(file);
@@ -108,9 +115,9 @@ public class FileManagerServlet extends HttpServlet {
 		} else if(file.isFile())
 			downloadFile(response, file);
 		else if(file.isDirectory()) {
-			if(search!=null&&!search.isEmpty())
+			if(search!=null&&!search.isEmpty()) {
 			     files = new Search(file.toPath(), search);
-			else if(type!=null&&type.startsWith("multipart/form-data")) {
+			} else if(type!=null&&type.startsWith("multipart/form-data")) {
 				for(Part part:request.getParts()) {
 					String name;
 					if((name=partFileName(part))==null) //retrieves <input type="file" name="...">, no other (e.g. input) form fields
@@ -118,18 +125,24 @@ public class FileManagerServlet extends HttpServlet {
 					if(request.getParameter("unzip")==null)
 						try(OutputStream output=new FileOutputStream(new File(file,name))) {
 							copyStream(part.getInputStream(), output); }
-					else ZipUtil.unpack(part.getInputStream(), file);
+					else { 
+						ZipUtil.unpack(part.getInputStream(), file);
+					}
 				}
-			} else files = new Directory(file);
+				files = new Directory(file);
+			} else {
+				files = new Directory(file);
+			}
 		} else throw new ServletException("Unknown type of file or folder.");
 		
 		if(files!=null) {
 			final PrintWriter writer = response.getWriter();
 			writer.println("<!DOCTYPE html><html><head><style>*,input[type=\"file\"]::-webkit-file-upload-button{font-family:monospace}</style></head><body>");
+			writer.println("<p>Runtime application path: "+ getRuntimeApplicationPath() +"</p>");
 			writer.println("<p>Current directory: "+files+"</p><pre>");
 			if(!(files instanceof Roots)) {
 				writer.print("<form method=\"post\"><label for=\"search\">Search Files:</label> <input type=\"text\" name=\"search\" id=\"search\" value=\""+(search!=null?search:"")+"\"> <button type=\"submit\">Search</button></form>");
-				writer.print("<form method=\"post\" enctype=\"multipart/form-data\"><label for=\"upload\">Upload Files:</label> <button type=\"submit\">Upload</button> <button type=\"submit\" name=\"unzip\">Upload & Unzip</button> <input type=\"file\" name=\"upload[]\" id=\"upload\" multiple></form>");
+				writer.print("<form method=\"post\" enctype=\"multipart/form-data\"><label for=\"upload\">Upload Files:</label> <button type=\"submit\">Upload</button> <button type=\"submit\" name=\"unzip\">Upload & Unzip</button> <input type=\"file\" name=\"upload[]\" id=\"upload\" multiple=\"multiple\"/></form>");
 				writer.println();
 			}
 			if(files instanceof Directory) {
@@ -141,13 +154,23 @@ public class FileManagerServlet extends HttpServlet {
 
 			for(File child:files.listFiles()) {
 				writer.print(child.isDirectory()?"+ ":"  ");
-				writer.print("<a href=\"?path="+URLEncoder.encode(child.getAbsolutePath(),ENCODING)+"\" title=\""+child.getAbsolutePath()+"\">"+child.getName()+"</a>");
+				writer.print("<a href=\"?path="+URLEncoder.encode(child.getAbsolutePath(),ENCODING)+"\" title=\""+child.getAbsolutePath()+"\">"+child.getName() + "</a> " + dateFormat.format(child.lastModified()) );
 				if(child.isDirectory())
 					writer.print(" <a href=\"?path="+URLEncoder.encode(child.getAbsolutePath(),ENCODING)+"&zip\" title=\"download\">&#8681;</a>");
 				writer.println();
 			}
 			writer.print("</pre></body></html>"); writer.flush();
 		}
+	}
+	
+	protected String getRuntimeApplicationPath() {
+		String path = "";
+		try {
+			path = new File(".").getCanonicalPath();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return path;
 	}
 
 	protected interface Files {

@@ -154,9 +154,13 @@ public class FileManagerServlet extends HttpServlet {
 
 			for(File child:files.listFiles()) {
 				writer.print(child.isDirectory()?"+ ":"  ");
-				writer.print("<a href=\"?path="+URLEncoder.encode(child.getAbsolutePath(),ENCODING)+"\" title=\""+child.getAbsolutePath()+"\">"+child.getName() + "</a> " + dateFormat.format(child.lastModified()) );
-				if(child.isDirectory())
+				writer.print("<a href=\"?path="+URLEncoder.encode(child.getAbsolutePath(),ENCODING)+"\" title=\""+child.getAbsolutePath()+"\">" + child.getName() + "</a> " + dateFormat.format(child.lastModified()) );
+				if(child.isDirectory()) {
 					writer.print(" <a href=\"?path="+URLEncoder.encode(child.getAbsolutePath(),ENCODING)+"&zip\" title=\"download\">&#8681;</a>");
+				}
+				if(search!=null&&!search.isEmpty()) {
+					writer.print(" <a href=\"?path="+URLEncoder.encode(child.getParentFile().getAbsolutePath(),ENCODING)+"\" title=\"go to parent folder\">&#128194;</a>");
+				}
 				writer.println();
 			}
 			writer.print("</pre></body></html>"); writer.flush();

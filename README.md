@@ -53,7 +53,7 @@ Even easier, you can include file-manager-servlet from this GitHub repository by
 <dependency>
   <groupId>lc.kra.servlet</groupId>
   <artifactId>file-manager-servlet</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.1</version>
 </dependency>
 ```
 

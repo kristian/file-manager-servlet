@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>lc.kra.servlet</groupId>
 	<artifactId>file-manager-servlet</artifactId>
-	<version>0.1.0</version>
+	<version>0.1.1</version>
 	<description>Servlet providing a simple remote file manager HTML interface.</description>
 	<url>https://github.com/kristian/file-manager-servlet</url>
 

@@ -144,6 +144,8 @@ public class FileManagerServlet extends HttpServlet {
 				writer.print("<a href=\"?path="+URLEncoder.encode(child.getAbsolutePath(),ENCODING)+"\" title=\""+child.getAbsolutePath()+"\">"+child.getName()+"</a>");
 				if(child.isDirectory())
 					writer.print(" <a href=\"?path="+URLEncoder.encode(child.getAbsolutePath(),ENCODING)+"&zip\" title=\"download\">&#8681;</a>");
+				if(search!=null&&!search.isEmpty())
+					writer.print(" <a href=\"?path="+URLEncoder.encode(child.getParentFile().getAbsolutePath(),ENCODING)+"\" title=\"go to parent folder\">&#128449;</a>");
 				writer.println();
 			}
 			writer.print("</pre></body></html>"); writer.flush();
@@ -169,8 +171,6 @@ public class FileManagerServlet extends HttpServlet {
 		}
 	}
 	protected static class Roots implements Files {
-		private static final FileSystemView fileSystemView = FileSystemView.getFileSystemView();
-
 		@Override public String toString() { return "root"; }
 		@Override public File[] listFiles() {
 			File[] roots = File.listRoots();
@@ -179,7 +179,9 @@ public class FileManagerServlet extends HttpServlet {
 				roots[root] = new File(roots[root].toURI()) {
 					private static final long serialVersionUID = 1l;
 					@Override public String getName() {
-						String displayName = fileSystemView.getSystemDisplayName(originalRoot);
+						String displayName = null;
+						try { displayName = FileSystemView.getFileSystemView().getSystemDisplayName(originalRoot); }
+						catch(NoClassDefFoundError e) { /* some JRE implementations may not feature the FileSystemView */ }
 						return displayName!=null&&!displayName.isEmpty()?displayName:originalRoot.getPath();
 					}
 				};
